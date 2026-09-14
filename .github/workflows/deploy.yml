@@ -1,0 +1,27 @@
+name: Deploy Battleship to Raspberry Pi
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Deploy updates
+        run: |
+          cd /home/cosmoss/Documents/battleship-bot
+          git pull origin master
+          npm install --omit=dev
+          node deploy-commands.js
+
+          if pm2 describe battleship > /dev/null 2>&1; then
+            echo "Redémarrage de battleship..."
+            pm2 restart battleship
+          else
+            echo "Premier démarrage de battleship..."
+            pm2 start main.js --name "battleship"
+          fi
+
+          pm2 save
