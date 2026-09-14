@@ -29,17 +29,7 @@ function buildPlacementBoard(selectedShips, isConfirmed = false) {
         }
         rows.push(row);
     }
-
-    // 5e ligne réservée au bouton d'action
-    const actionRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('confirm_ships')
-            .setLabel(`Valider ma flotte (${selectedShips.size}/${REQUIRED_SHIPS})`)
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(selectedShips.size !== REQUIRED_SHIPS || isConfirmed),
-    );
-
-    return [rows[0], rows[1], rows[2], rows[3], actionRow];
+    return rows;
 }
 
 module.exports = {
@@ -55,6 +45,7 @@ module.exports = {
             .setTitle('🛠️ Configuration de ta flotte')
             .setDescription(
                 `Sélectionne exactement **${REQUIRED_SHIPS} cases** sur ta grille.\n` +
+                `Actuellement sélectionné(s) : **${currentSelection.size}/${REQUIRED_SHIPS}**\n` +
                 `Ce message est **secret**, toi seul peux le voir.`
             )
             .setColor(0x5865F2);
@@ -72,11 +63,19 @@ module.exports = {
         });
 
         collector.on('collect', async i => {
-            if (i.customId === 'confirm_ships') {
+            const cellIndex = parseInt(i.customId.replace('set_', ''), 10);
+
+            if (currentSelection.has(cellIndex)) {
+                currentSelection.delete(cellIndex);
+            } else {
+                currentSelection.add(cellIndex);
+            }
+
+            if (currentSelection.size === REQUIRED_SHIPS) {
                 savedFleets.set(userId, new Set(currentSelection));
                 embed
                     .setColor(0x57F287)
-                    .setDescription('✅ **Ta flotte a été enregistrée avec succès !**\nElle sera utilisée lors de tes prochains duels.');
+                    .setDescription('✅ **Ta flotte de 3 navires a été enregistrée avec succès !**\nElle sera utilisée lors de tes prochains duels.');
 
                 await i.update({
                     embeds: [embed],
@@ -85,21 +84,14 @@ module.exports = {
                 return collector.stop('confirmed');
             }
 
-            const cellIndex = parseInt(i.customId.replace('set_', ''), 10);
-
-            if (currentSelection.has(cellIndex)) {
-                currentSelection.delete(cellIndex);
-            } else {
-                if (currentSelection.size >= REQUIRED_SHIPS) {
-                    return i.reply({
-                        content: `Tu ne peux placer que ${REQUIRED_SHIPS} navires au maximum. Décoche une case pour en changer.`,
-                        ephemeral: true,
-                    });
-                }
-                currentSelection.add(cellIndex);
-            }
+            embed.setDescription(
+                `Sélectionne exactement **${REQUIRED_SHIPS} cases** sur ta grille.\n` +
+                `Actuellement sélectionné(s) : **${currentSelection.size}/${REQUIRED_SHIPS}**\n` +
+                `Ce message est **secret**, toi seul peux le voir.`
+            );
 
             await i.update({
+                embeds: [embed],
                 components: buildPlacementBoard(currentSelection),
             });
         });
