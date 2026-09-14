@@ -6,6 +6,7 @@ const {
     EmbedBuilder,
     ComponentType,
 } = require('discord.js');
+const { savedFleets } = require('../../gameState');
 
 const GRID_SIZE = 5;
 const SHIPS_COUNT = 3;
@@ -59,9 +60,17 @@ module.exports = {
             return interaction.reply({ content: 'Adversaire non valide.', ephemeral: true });
         }
 
+        const getFleetForUser = (user) => {
+            if (savedFleets.has(user.id)) {
+                // On clone le Set pour ne pas altérer la sauvegarde originale pendant les tirs
+                return new Set(savedFleets.get(user.id));
+            }
+            return generateShips();
+        };
+
         const players = {
-            [challenger.id]: { user: challenger, ships: generateShips(), shots: new Set() },
-            [opponent.id]: { user: opponent, ships: generateShips(), shots: new Set() },
+            [challenger.id]: { user: challenger, ships: getFleetForUser(challenger), shots: new Set() },
+            [opponent.id]: { user: opponent, ships: getFleetForUser(opponent), shots: new Set() },
         };
 
         let currentTurn = challenger.id;
