@@ -6,7 +6,7 @@ const {
     EmbedBuilder,
     ComponentType,
 } = require('discord.js');
-const { savedFleets } = require('../../gameState');
+const { savedFleets, recordGameResult } = require('../../gameState');
 
 const GRID_SIZE = 5;
 const SHIPS_COUNT = 3;
@@ -118,7 +118,11 @@ module.exports = {
             const isHit = enemy.ships.has(cellIndex);
             const hits = [...enemy.shots].filter(idx => enemy.ships.has(idx)).length;
 
+            // Condition de victoire
             if (hits === SHIPS_COUNT) {
+                const loserId = enemyId;
+                recordGameResult(interaction.guildId, currentTurn, loserId);
+
                 const finalEmbed = new EmbedBuilder()
                     .setTitle('🏆 Victoire !')
                     .setColor(0x57F287)
